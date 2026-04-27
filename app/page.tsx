@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowDown,
   ArrowUp,
@@ -164,8 +164,23 @@ export default function Home() {
   const [fit, setFit] = useState<ImageFit>("contain");
   const [pageSelection, setPageSelection] = useState("");
   const [result, setResult] = useState<Result | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!result) {
+      setPreviewUrl(null);
+      return;
+    }
+
+    const buffer = new ArrayBuffer(result.bytes.byteLength);
+    new Uint8Array(buffer).set(result.bytes);
+    const url = URL.createObjectURL(new Blob([buffer], { type: "application/pdf" }));
+    setPreviewUrl(url);
+
+    return () => URL.revokeObjectURL(url);
+  }, [result]);
 
   const activeFiles = useMemo(() => {
     if (tab === "image") return imageFiles;
@@ -393,15 +408,29 @@ export default function Home() {
             />
 
             {result ? (
-              <div className="result">
-                <div>
-                  <strong>{result.filename}</strong>
-                  <div>{result.detail}</div>
+              <>
+                <div className="result">
+                  <div>
+                    <strong>{result.filename}</strong>
+                    <div>{result.detail}</div>
+                  </div>
+                  <button className="button" type="button" onClick={() => downloadBytes(result.bytes, result.filename)}>
+                    <Download size={17} /> 다운로드
+                  </button>
                 </div>
-                <button className="button" type="button" onClick={() => downloadBytes(result.bytes, result.filename)}>
-                  <Download size={17} /> 다운로드
-                </button>
-              </div>
+
+                {previewUrl ? (
+                  <div className="preview">
+                    <div className="preview-head">
+                      <div>
+                        <strong>PDF 미리보기</strong>
+                        <span>다운로드 전에 페이지 배치를 확인하세요.</span>
+                      </div>
+                    </div>
+                    <iframe src={previewUrl} title="PDF 미리보기" />
+                  </div>
+                ) : null}
+              </>
             ) : null}
           </div>
         </section>
