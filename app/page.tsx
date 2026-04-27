@@ -49,6 +49,26 @@ function defaultOutputName(source: string, suffix: string) {
   return `${source.replace(/\.[^/.]+$/, "")}-${suffix}.pdf`;
 }
 
+function moveByDirection(files: ToolFile[], id: string, direction: -1 | 1) {
+  const index = files.findIndex((item) => item.id === id);
+  const target = index + direction;
+  if (index < 0 || target < 0 || target >= files.length) return files;
+  const next = [...files];
+  [next[index], next[target]] = [next[target], next[index]];
+  return next;
+}
+
+function moveBefore(files: ToolFile[], fromId: string, toId: string) {
+  const fromIndex = files.findIndex((item) => item.id === fromId);
+  const toIndex = files.findIndex((item) => item.id === toId);
+  if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) return files;
+
+  const next = [...files];
+  const [moved] = next.splice(fromIndex, 1);
+  next.splice(toIndex, 0, moved);
+  return next;
+}
+
 function Dropzone({
   tab,
   multiple,
@@ -100,21 +120,59 @@ function FileList({
   files,
   reorder,
   onRemove,
-  onMove
+  onMove,
+  onReorder
 }: {
   files: ToolFile[];
   reorder?: boolean;
   onRemove: (id: string) => void;
   onMove?: (id: string, direction: -1 | 1) => void;
+  onReorder?: (fromId: string, toId: string) => void;
 }) {
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
+
   if (files.length === 0) {
     return <p className="empty-state">아직 선택된 파일이 없습니다.</p>;
   }
 
   return (
-    <div className="file-list">
-      {files.map((item, index) => (
-        <div className="file-row" key={item.id}>
+    <>
+      {reorder ? <p className="order-hint">파일을 드래그해서 PDF 페이지 순서를 바꿀 수 있습니다.</p> : null}
+      <div className="file-list">
+        {files.map((item, index) => (
+          <div
+            className={`file-row ${draggedId === item.id ? "dragging" : ""} ${dragOverId === item.id ? "drag-over" : ""}`}
+            key={item.id}
+            draggable={Boolean(reorder)}
+            onDragStart={(event) => {
+              if (!reorder) return;
+              setDraggedId(item.id);
+              event.dataTransfer.effectAllowed = "move";
+              event.dataTransfer.setData("text/plain", item.id);
+            }}
+            onDragOver={(event) => {
+              if (!reorder) return;
+              event.preventDefault();
+              event.dataTransfer.dropEffect = "move";
+              setDragOverId(item.id);
+            }}
+            onDragLeave={() => {
+              if (dragOverId === item.id) setDragOverId(null);
+            }}
+            onDrop={(event) => {
+              if (!reorder) return;
+              event.preventDefault();
+              const fromId = event.dataTransfer.getData("text/plain") || draggedId;
+              setDraggedId(null);
+              setDragOverId(null);
+              if (fromId && fromId !== item.id) onReorder?.(fromId, item.id);
+            }}
+            onDragEnd={() => {
+              setDraggedId(null);
+              setDragOverId(null);
+            }}
+          >
           <div className="file-meta">
             <span className="file-order" aria-label={`${index + 1}번째 파일`}>
               {index + 1}
@@ -154,9 +212,10 @@ function FileList({
               <Trash2 size={18} />
             </button>
           </div>
-        </div>
-      ))}
-    </div>
+          </div>
+        ))}
+      </div>
+    </>
   );
 }
 
@@ -225,14 +284,19 @@ export default function Home() {
   }
 
   function moveMergeFile(id: string, direction: -1 | 1) {
-    setMergeFiles((current) => {
-      const index = current.findIndex((item) => item.id === id);
-      const target = index + direction;
-      if (index < 0 || target < 0 || target >= current.length) return current;
-      const next = [...current];
-      [next[index], next[target]] = [next[target], next[index]];
-      return next;
-    });
+    setMergeFiles((current) => moveByDirection(current, id, direction));
+  }
+
+  function moveImageFile(id: string, direction: -1 | 1) {
+    setImageFiles((current) => moveByDirection(current, id, direction));
+  }
+
+  function reorderImageFile(fromId: string, toId: string) {
+    setImageFiles((current) => moveBefore(current, fromId, toId));
+  }
+
+  function reorderMergeFile(fromId: string, toId: string) {
+    setMergeFiles((current) => moveBefore(current, fromId, toId));
   }
 
   async function runTool() {
@@ -420,9 +484,10 @@ export default function Home() {
 
             <FileList
               files={activeFiles}
-              reorder={tab === "merge"}
+              reorder={tab === "image" || tab === "merge"}
               onRemove={removeFile}
-              onMove={moveMergeFile}
+              onMove={tab === "image" ? moveImageFile : moveMergeFile}
+              onReorder={tab === "image" ? reorderImageFile : reorderMergeFile}
             />
 
             {result ? (
