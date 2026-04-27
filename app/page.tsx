@@ -59,9 +59,9 @@ function Dropzone({
   onFiles: (files: File[]) => void;
 }) {
   const [dragging, setDragging] = useState(false);
-  const label = tab === "image" ? "이미지를 여기에 놓거나 선택" : "PDF를 여기에 놓거나 선택";
+  const label = tab === "image" ? "이미지 여러 장을 한 번에 선택" : "PDF를 여기에 놓거나 선택";
   const hint = tab === "image"
-    ? "JPG, PNG, WebP 파일을 PDF 페이지로 변환합니다."
+    ? "JPG, PNG, WebP를 올린 순서대로 하나의 세로 A4 PDF로 만듭니다."
     : multiple
       ? "여러 PDF를 원하는 순서로 병합합니다."
       : "한 개의 PDF에서 필요한 페이지만 추출합니다.";
@@ -116,6 +116,9 @@ function FileList({
       {files.map((item, index) => (
         <div className="file-row" key={item.id}>
           <div className="file-meta">
+            <span className="file-order" aria-label={`${index + 1}번째 파일`}>
+              {index + 1}
+            </span>
             <span className="file-icon" aria-hidden="true">
               <FileText size={19} />
             </span>
@@ -351,7 +354,7 @@ export default function Home() {
               <h2>{tabs.find((item) => item.id === tab)?.label}</h2>
               <p>
                 {tab === "image"
-                  ? "선택한 이미지 순서대로 A4 PDF 페이지를 생성합니다."
+                  ? "여러 이미지를 올린 순서대로 하나의 세로 A4 PDF로 생성합니다."
                   : tab === "split"
                     ? "페이지 번호를 입력하면 해당 페이지만 새 PDF로 저장합니다."
                     : "PDF를 목록 순서대로 한 파일로 합칩니다."}
@@ -375,14 +378,14 @@ export default function Home() {
                       value={orientation}
                       onChange={(event) => setOrientation(event.target.value as PageOrientation)}
                     >
-                      <option value="portrait">세로 A4</option>
+                      <option value="portrait">세로 A4 기본</option>
                       <option value="landscape">가로 A4</option>
                     </select>
                   </div>
                   <div className="field">
                     <label htmlFor="fit">이미지 맞춤</label>
                     <select id="fit" value={fit} onChange={(event) => setFit(event.target.value as ImageFit)}>
-                      <option value="contain">전체 보이기</option>
+                      <option value="contain">세로 A4 안에 맞추기</option>
                       <option value="cover">페이지 채우기</option>
                     </select>
                   </div>
@@ -403,7 +406,7 @@ export default function Home() {
 
               <button className="button" type="button" disabled={!canRun} onClick={runTool}>
                 <Download size={17} />
-                {busy ? "처리 중" : "PDF 만들기"}
+                {busy ? "처리 중" : tab === "image" ? "하나의 PDF 만들기" : "PDF 만들기"}
               </button>
             </div>
 

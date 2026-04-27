@@ -383,6 +383,19 @@ h1 {
   min-width: 0;
 }
 
+.file-order {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: #eef4ff;
+  color: var(--accent-dark);
+  font-size: 0.82rem;
+  font-weight: 800;
+  flex: 0 0 auto;
+}
+
 .file-icon {
   width: 38px;
   height: 38px;
