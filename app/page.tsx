@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ArrowDown,
   ArrowUp,
@@ -14,10 +14,8 @@ import {
   Scissors,
   ShieldCheck,
   Trash2,
-  Upload,
-  WifiOff
+  Upload
 } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
 import {
   downloadBytes,
   formatBytes,
@@ -168,12 +166,6 @@ export default function Home() {
   const [result, setResult] = useState<Result | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [supabaseReady, setSupabaseReady] = useState(false);
-
-  useEffect(() => {
-    const client = createClient();
-    setSupabaseReady(Boolean(client));
-  }, []);
 
   const activeFiles = useMemo(() => {
     if (tab === "image") return imageFiles;
@@ -275,12 +267,12 @@ export default function Home() {
             </div>
             <div className="brand-copy">
               <strong>Private PDF Studio</strong>
-              <span>Vercel 배포용 브라우저 PDF 도구</span>
+              <span>GitHub Pages 배포용 브라우저 PDF 도구</span>
             </div>
           </div>
           <div className="status-pill">
-            {supabaseReady ? <BadgeCheck size={16} /> : <WifiOff size={16} />}
-            {supabaseReady ? "Supabase 연결 준비됨" : "Supabase 환경변수 대기"}
+            <BadgeCheck size={16} />
+            GitHub Pages 배포 준비
           </div>
         </div>
       </header>
@@ -292,7 +284,7 @@ export default function Home() {
             <h1>개인정보가 남지 않는 PDF 작업대</h1>
             <p>
               이미지를 PDF로 만들고, PDF를 나누거나 병합합니다. 선택한 파일은 브라우저 안에서만
-              읽고 처리하며 Supabase Storage나 Vercel 서버로 전송하지 않습니다.
+              읽고 처리하며 GitHub 서버로 전송하지 않습니다.
             </p>
             <div className="privacy-strip">
               <span className="privacy-item">
@@ -309,9 +301,9 @@ export default function Home() {
           <aside className="privacy-panel" aria-label="개인정보 처리 방식">
             <h2>처리 원칙</h2>
             <ul>
-              <li>파일 바이트는 API Route, Server Action, Supabase Storage로 보내지 않습니다.</li>
-              <li>Supabase는 배포 환경 연결 확인용 클라이언트만 준비되어 있습니다.</li>
-              <li>Vercel은 앱 호스팅만 담당하고 PDF 변환은 사용자의 브라우저에서 실행됩니다.</li>
+              <li>파일 바이트는 API Route, Server Action, Storage로 보내지 않습니다.</li>
+              <li>GitHub Pages는 정적 파일 호스팅만 담당합니다.</li>
+              <li>PDF 변환은 사용자의 브라우저에서 실행됩니다.</li>
             </ul>
           </aside>
         </div>

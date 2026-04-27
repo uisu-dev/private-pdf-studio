@@ -1,13 +1,13 @@
 # Private PDF Studio
 
-이미지를 PDF로 만들고 PDF를 나누거나 병합하는 Vercel 배포용 Next.js 앱입니다.
+이미지를 PDF로 만들고 PDF를 나누거나 병합하는 GitHub Pages 배포용 Next.js 앱입니다.
 
 ## 개인정보 설계
 
 - 선택한 이미지/PDF 파일은 브라우저 메모리에서만 처리됩니다.
 - PDF 변환, 분할, 병합은 `pdf-lib`를 사용해 클라이언트에서 실행됩니다.
-- 파일 바이트를 Next.js API Route, Server Action, Supabase Storage, Vercel 서버로 보내지 않습니다.
-- Supabase는 클라이언트 연결 준비만 포함되어 있으며, 업로드 자료 저장에는 사용하지 않습니다.
+- 파일 바이트를 API Route, Server Action, Storage, GitHub 서버로 보내지 않습니다.
+- GitHub Pages는 HTML/CSS/JS 정적 파일만 호스팅합니다.
 
 ## 로컬 실행
 
@@ -18,24 +18,20 @@ npm run dev
 
 브라우저에서 `http://localhost:3000`을 열면 됩니다.
 
-## Supabase 설정
+## GitHub Pages 배포
 
-Supabase 프로젝트를 만들고 Vercel 환경 변수에 아래 값을 넣습니다.
+이 저장소는 `.github/workflows/pages.yml`로 GitHub Pages 배포를 자동화합니다.
 
-```bash
-NEXT_PUBLIC_SUPABASE_URL=...
-NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+1. GitHub 저장소의 `Settings`로 이동합니다.
+2. 왼쪽 메뉴에서 `Pages`를 엽니다.
+3. `Build and deployment`의 `Source`를 `GitHub Actions`로 선택합니다.
+4. `main` 브랜치에 push하면 Actions가 `out` 폴더를 배포합니다.
+
+배포 주소는 보통 아래와 같습니다.
+
+```text
+https://uisu-dev.github.io/private-pdf-studio/
 ```
-
-이 앱은 개인정보 보호를 위해 Supabase Storage 버킷을 사용하지 않습니다. 나중에 로그인, 결제, 사용량 제한 같은 기능을 추가하더라도 업로드 파일 자체는 저장하지 않는 원칙을 유지하는 편이 좋습니다.
-
-## Vercel 배포
-
-1. GitHub 저장소에 이 프로젝트를 올립니다.
-2. Vercel에서 저장소를 Import합니다.
-3. Framework Preset은 Next.js로 둡니다.
-4. Supabase 환경 변수를 추가합니다.
-5. Deploy를 실행합니다.
 
 ## 주요 기능
 
