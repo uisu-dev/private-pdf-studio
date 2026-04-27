@@ -24,6 +24,7 @@ import {
   mergePdfs,
   splitPdf,
   type ImageFit,
+  type PageOrientation,
   type ToolFile
 } from "@/lib/pdf-tools";
 
@@ -162,6 +163,7 @@ export default function Home() {
   const [splitFiles, setSplitFiles] = useState<ToolFile[]>([]);
   const [mergeFiles, setMergeFiles] = useState<ToolFile[]>([]);
   const [fit, setFit] = useState<ImageFit>("contain");
+  const [orientation, setOrientation] = useState<PageOrientation>("portrait");
   const [pageSelection, setPageSelection] = useState("");
   const [result, setResult] = useState<Result | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -237,11 +239,11 @@ export default function Home() {
 
     try {
       if (tab === "image") {
-        const bytes = await imagesToPdf(imageFiles.map((item) => item.file), fit);
+        const bytes = await imagesToPdf(imageFiles.map((item) => item.file), fit, orientation);
         setResult({
           filename: "images-private.pdf",
           bytes,
-          detail: `${imageFiles.length}개 이미지 변환 완료`
+          detail: `${imageFiles.length}개 이미지, ${orientation === "portrait" ? "세로" : "가로"} A4 변환 완료`
         });
       }
 
@@ -296,10 +298,10 @@ export default function Home() {
         <div className="hero-grid">
           <div>
             <div className="eyebrow">No server upload</div>
-            <h1>개인정보가 남지 않는 PDF 작업대</h1>
+            <h1>Private PDF</h1>
             <p>
-              이미지를 PDF로 만들고, PDF를 나누거나 병합합니다. 선택한 파일은 브라우저 안에서만
-              읽고 처리하며 GitHub 서버로 전송하지 않습니다.
+              이미지 변환, PDF 나누기와 병합을 브라우저에서 바로 처리합니다. 선택한 파일은
+              GitHub 서버로 전송하지 않습니다.
             </p>
             <div className="privacy-strip">
               <span className="privacy-item">
@@ -365,13 +367,26 @@ export default function Home() {
 
             <div className="toolbar">
               {tab === "image" ? (
-                <div className="field">
-                  <label htmlFor="fit">이미지 맞춤</label>
-                  <select id="fit" value={fit} onChange={(event) => setFit(event.target.value as ImageFit)}>
-                    <option value="contain">전체 보이기</option>
-                    <option value="cover">페이지 채우기</option>
-                  </select>
-                </div>
+                <>
+                  <div className="field">
+                    <label htmlFor="orientation">페이지 방향</label>
+                    <select
+                      id="orientation"
+                      value={orientation}
+                      onChange={(event) => setOrientation(event.target.value as PageOrientation)}
+                    >
+                      <option value="portrait">세로 A4</option>
+                      <option value="landscape">가로 A4</option>
+                    </select>
+                  </div>
+                  <div className="field">
+                    <label htmlFor="fit">이미지 맞춤</label>
+                    <select id="fit" value={fit} onChange={(event) => setFit(event.target.value as ImageFit)}>
+                      <option value="contain">전체 보이기</option>
+                      <option value="cover">페이지 채우기</option>
+                    </select>
+                  </div>
+                </>
               ) : null}
 
               {tab === "split" ? (

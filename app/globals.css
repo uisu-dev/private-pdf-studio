@@ -118,14 +118,14 @@ button {
 }
 
 .hero {
-  padding: 46px 0 28px;
+  padding: 40px 0 26px;
 }
 
 .hero-grid {
   display: grid;
-  grid-template-columns: minmax(0, 0.95fr) minmax(320px, 1.05fr);
+  grid-template-columns: minmax(0, 0.9fr) minmax(320px, 1.1fr);
   gap: 32px;
-  align-items: end;
+  align-items: center;
 }
 
 .eyebrow {
@@ -137,22 +137,22 @@ button {
 }
 
 h1 {
-  font-size: clamp(2.35rem, 5.4vw, 5rem);
-  line-height: 1;
-  margin: 14px 0 18px;
-  max-width: 760px;
+  font-size: clamp(2.35rem, 4.4vw, 4.2rem);
+  line-height: 1.04;
+  margin: 12px 0 16px;
+  max-width: 540px;
 }
 
 .hero p {
   color: var(--muted);
-  font-size: 1.05rem;
-  line-height: 1.75;
-  max-width: 620px;
+  font-size: 1rem;
+  line-height: 1.72;
+  max-width: 520px;
   margin: 0;
 }
 
 .privacy-strip {
-  margin-top: 28px;
+  margin-top: 24px;
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
@@ -557,7 +557,7 @@ h1 {
   }
 
   .hero {
-    padding-top: 34px;
+    padding-top: 30px;
   }
 
   .hero-grid,
@@ -594,7 +594,8 @@ h1 {
   }
 
   h1 {
-    font-size: 2.4rem;
+    font-size: 2.55rem;
+    max-width: 360px;
   }
 
   .panel-body,

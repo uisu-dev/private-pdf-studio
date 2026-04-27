@@ -1,6 +1,7 @@
 import { PDFDocument } from "pdf-lib";
 
 export type ImageFit = "contain" | "cover";
+export type PageOrientation = "portrait" | "landscape";
 
 export type ToolFile = {
   id: string;
@@ -80,25 +81,27 @@ async function embedImage(pdf: PDFDocument, file: File) {
   return pdf.embedPng(pngBytes);
 }
 
-export async function imagesToPdf(files: File[], fit: ImageFit) {
+export async function imagesToPdf(files: File[], fit: ImageFit, orientation: PageOrientation) {
   if (files.length === 0) {
     throw new Error("이미지를 먼저 추가해주세요.");
   }
 
   const pdf = await PDFDocument.create();
+  const pageWidth = orientation === "landscape" ? A4_HEIGHT : A4_WIDTH;
+  const pageHeight = orientation === "landscape" ? A4_WIDTH : A4_HEIGHT;
 
   for (const file of files) {
     const embedded = await embedImage(pdf, file);
-    const page = pdf.addPage([A4_WIDTH, A4_HEIGHT]);
+    const page = pdf.addPage([pageWidth, pageHeight]);
     const scale = fit === "cover"
-      ? Math.max(A4_WIDTH / embedded.width, A4_HEIGHT / embedded.height)
-      : Math.min(A4_WIDTH / embedded.width, A4_HEIGHT / embedded.height);
+      ? Math.max(pageWidth / embedded.width, pageHeight / embedded.height)
+      : Math.min(pageWidth / embedded.width, pageHeight / embedded.height);
     const width = embedded.width * scale;
     const height = embedded.height * scale;
 
     page.drawImage(embedded, {
-      x: (A4_WIDTH - width) / 2,
-      y: (A4_HEIGHT - height) / 2,
+      x: (pageWidth - width) / 2,
+      y: (pageHeight - height) / 2,
       width,
       height
     });
