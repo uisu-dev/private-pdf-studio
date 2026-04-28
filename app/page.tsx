@@ -7,6 +7,7 @@ import {
   BadgeCheck,
   Combine,
   Download,
+  FileArchive,
   FileImage,
   FileLock2,
   FileText,
@@ -17,18 +18,20 @@ import {
   Upload
 } from "lucide-react";
 import {
+  compressPdf,
   downloadBytes,
   formatBytes,
   imagesToPdf,
   makeId,
   mergePdfs,
   splitPdf,
+  type CompressionLevel,
   type ImageFit,
   type PageOrientation,
   type ToolFile
 } from "@/lib/pdf-tools";
 
-type Tab = "image" | "split" | "merge";
+type Tab = "image" | "split" | "merge" | "compress";
 type Result = {
   filename: string;
   bytes: Uint8Array;
@@ -38,7 +41,8 @@ type Result = {
 const tabs: Array<{ id: Tab; label: string; icon: React.ReactNode }> = [
   { id: "image", label: "이미지 PDF", icon: <FileImage size={21} /> },
   { id: "split", label: "PDF 나누기", icon: <Scissors size={21} /> },
-  { id: "merge", label: "PDF 병합", icon: <Combine size={21} /> }
+  { id: "merge", label: "PDF 병합", icon: <Combine size={21} /> },
+  { id: "compress", label: "PDF 줄이기", icon: <FileArchive size={21} /> }
 ];
 
 function acceptFor(tab: Tab) {
@@ -84,7 +88,9 @@ function Dropzone({
     ? "JPG, PNG, WebP를 올린 순서대로 하나의 세로 A4 PDF로 만듭니다."
     : multiple
       ? "여러 PDF를 원하는 순서로 병합합니다."
-      : "한 개의 PDF에서 필요한 페이지만 추출합니다.";
+      : tab === "compress"
+        ? "PDF를 다시 렌더링해 파일 크기를 줄입니다."
+        : "한 개의 PDF에서 필요한 페이지만 추출합니다.";
 
   return (
     <label
@@ -224,8 +230,10 @@ export default function Home() {
   const [imageFiles, setImageFiles] = useState<ToolFile[]>([]);
   const [splitFiles, setSplitFiles] = useState<ToolFile[]>([]);
   const [mergeFiles, setMergeFiles] = useState<ToolFile[]>([]);
+  const [compressFiles, setCompressFiles] = useState<ToolFile[]>([]);
   const [fit, setFit] = useState<ImageFit>("contain");
   const [orientation, setOrientation] = useState<PageOrientation>("portrait");
+  const [compressionLevel, setCompressionLevel] = useState<CompressionLevel>("balanced");
   const [pageSelection, setPageSelection] = useState("");
   const [result, setResult] = useState<Result | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -249,8 +257,9 @@ export default function Home() {
   const activeFiles = useMemo(() => {
     if (tab === "image") return imageFiles;
     if (tab === "split") return splitFiles;
-    return mergeFiles;
-  }, [imageFiles, mergeFiles, splitFiles, tab]);
+    if (tab === "merge") return mergeFiles;
+    return compressFiles;
+  }, [compressFiles, imageFiles, mergeFiles, splitFiles, tab]);
 
   function addFiles(files: File[]) {
     setResult(null);
@@ -271,6 +280,8 @@ export default function Home() {
       setImageFiles((current) => [...current, ...next]);
     } else if (tab === "split") {
       setSplitFiles(next.slice(0, 1));
+    } else if (tab === "compress") {
+      setCompressFiles(next.slice(0, 1));
     } else {
       setMergeFiles((current) => [...current, ...next]);
     }
@@ -281,6 +292,7 @@ export default function Home() {
     if (tab === "image") setImageFiles((current) => current.filter((item) => item.id !== id));
     if (tab === "split") setSplitFiles((current) => current.filter((item) => item.id !== id));
     if (tab === "merge") setMergeFiles((current) => current.filter((item) => item.id !== id));
+    if (tab === "compress") setCompressFiles((current) => current.filter((item) => item.id !== id));
   }
 
   function moveMergeFile(id: string, direction: -1 | 1) {
@@ -330,6 +342,19 @@ export default function Home() {
           filename: "merged-private.pdf",
           bytes,
           detail: `${mergeFiles.length}개 PDF 병합 완료`
+        });
+      }
+
+      if (tab === "compress") {
+        if (!compressFiles[0]) throw new Error("줄일 PDF를 먼저 추가해주세요.");
+        const bytes = await compressPdf(compressFiles[0].file, compressionLevel);
+        const before = compressFiles[0].file.size;
+        const after = bytes.byteLength;
+        const saved = Math.max(0, Math.round((1 - after / before) * 100));
+        setResult({
+          filename: defaultOutputName(compressFiles[0].file.name, "compressed"),
+          bytes,
+          detail: `${formatBytes(before)} → ${formatBytes(after)}${saved > 0 ? `, ${saved}% 감소` : ""}`
         });
       }
     } catch (error) {
@@ -421,7 +446,9 @@ export default function Home() {
                   ? "여러 이미지를 올린 순서대로 하나의 세로 A4 PDF로 생성합니다."
                   : tab === "split"
                     ? "페이지 번호를 입력하면 해당 페이지만 새 PDF로 저장합니다."
-                    : "PDF를 목록 순서대로 한 파일로 합칩니다."}
+                    : tab === "merge"
+                      ? "PDF를 목록 순서대로 한 파일로 합칩니다."
+                      : "이미지 중심 PDF를 다시 렌더링해 파일 크기를 줄입니다."}
               </p>
             </div>
             <button className="button secondary" type="button" onClick={() => window.location.reload()}>
@@ -430,7 +457,7 @@ export default function Home() {
           </div>
 
           <div className="panel-body">
-            <Dropzone tab={tab} multiple={tab !== "split"} onFiles={addFiles} />
+            <Dropzone tab={tab} multiple={tab === "image" || tab === "merge"} onFiles={addFiles} />
 
             <div className="toolbar">
               {tab === "image" ? (
@@ -468,6 +495,21 @@ export default function Home() {
                 </div>
               ) : null}
 
+              {tab === "compress" ? (
+                <div className="field">
+                  <label htmlFor="compression">압축 정도</label>
+                  <select
+                    id="compression"
+                    value={compressionLevel}
+                    onChange={(event) => setCompressionLevel(event.target.value as CompressionLevel)}
+                  >
+                    <option value="balanced">권장</option>
+                    <option value="small">작게</option>
+                    <option value="tiny">최대한 작게</option>
+                  </select>
+                </div>
+              ) : null}
+
               <button className="button" type="button" disabled={!canRun} onClick={runTool}>
                 <Download size={17} />
                 {busy ? "처리 중" : tab === "image" ? "하나의 PDF 만들기" : "PDF 만들기"}
@@ -481,6 +523,12 @@ export default function Home() {
             ) : null}
 
             {message ? <div className="notice">{message}</div> : null}
+
+            {tab === "compress" ? (
+              <div className="notice">
+                압축 PDF는 페이지를 이미지로 다시 만드는 방식이라 텍스트 선택이나 검색이 사라질 수 있습니다.
+              </div>
+            ) : null}
 
             <FileList
               files={activeFiles}

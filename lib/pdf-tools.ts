@@ -2,6 +2,7 @@ import { PDFDocument } from "pdf-lib";
 
 export type ImageFit = "contain" | "cover";
 export type PageOrientation = "portrait" | "landscape";
+export type CompressionLevel = "balanced" | "small" | "tiny";
 
 export type ToolFile = {
   id: string;
@@ -187,6 +188,75 @@ export async function mergePdfs(files: File[]) {
   }
 
   return output.save();
+}
+
+const compressionSettings: Record<CompressionLevel, { jpegQuality: number; maxWidth: number }> = {
+  balanced: { jpegQuality: 0.78, maxWidth: 1600 },
+  small: { jpegQuality: 0.62, maxWidth: 1200 },
+  tiny: { jpegQuality: 0.48, maxWidth: 900 }
+};
+
+async function canvasToJpegBytes(canvas: HTMLCanvasElement, quality: number) {
+  const blob = await new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob((value) => {
+      if (value) resolve(value);
+      else reject(new Error("PDF 페이지 압축에 실패했습니다."));
+    }, "image/jpeg", quality);
+  });
+
+  return blob.arrayBuffer();
+}
+
+export async function compressPdf(file: File, level: CompressionLevel) {
+  const pdfjs = await import("pdfjs-dist");
+  pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+    "pdfjs-dist/build/pdf.worker.mjs",
+    import.meta.url
+  ).toString();
+
+  const sourceBytes = await file.arrayBuffer();
+  const source = await pdfjs.getDocument({ data: new Uint8Array(sourceBytes) }).promise;
+  const output = await PDFDocument.create();
+  const { jpegQuality, maxWidth } = compressionSettings[level];
+
+  for (let pageNumber = 1; pageNumber <= source.numPages; pageNumber += 1) {
+    const page = await source.getPage(pageNumber);
+    const baseViewport = page.getViewport({ scale: 1 });
+    const renderScale = Math.min(maxWidth / baseViewport.width, 1.6);
+    const viewport = page.getViewport({ scale: renderScale });
+
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d", { alpha: false });
+    if (!context) {
+      throw new Error("브라우저에서 PDF 압축을 사용할 수 없습니다.");
+    }
+
+    canvas.width = Math.max(1, Math.floor(viewport.width));
+    canvas.height = Math.max(1, Math.floor(viewport.height));
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+
+    await page.render({
+      canvas,
+      canvasContext: context,
+      viewport
+    }).promise;
+
+    const jpeg = await output.embedJpg(await canvasToJpegBytes(canvas, jpegQuality));
+    const outputPage = output.addPage([baseViewport.width, baseViewport.height]);
+    outputPage.drawImage(jpeg, {
+      x: 0,
+      y: 0,
+      width: baseViewport.width,
+      height: baseViewport.height
+    });
+
+    page.cleanup();
+  }
+
+  source.destroy();
+
+  return output.save({ useObjectStreams: true });
 }
 
 export function downloadBytes(bytes: Uint8Array, filename: string) {
