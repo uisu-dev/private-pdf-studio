@@ -272,3 +272,84 @@ export function downloadBytes(bytes: Uint8Array, filename: string) {
   anchor.remove();
   window.setTimeout(() => URL.revokeObjectURL(url), 0);
 }
+
+export type PdfPagePreview = {
+  id: string;
+  pageIndex: number;
+  label: number;
+  thumbUrl: string;
+};
+
+export async function loadPdfPagePreviews(file: File, maxWidth = 180): Promise<PdfPagePreview[]> {
+  const pdfjs = await import("pdfjs-dist");
+  pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+    "pdfjs-dist/build/pdf.worker.mjs",
+    import.meta.url
+  ).toString();
+
+  const sourceBytes = await file.arrayBuffer();
+  const source = await pdfjs.getDocument({ data: new Uint8Array(sourceBytes) }).promise;
+  const pages: PdfPagePreview[] = [];
+
+  for (let pageNumber = 1; pageNumber <= source.numPages; pageNumber += 1) {
+    const page = await source.getPage(pageNumber);
+    const baseViewport = page.getViewport({ scale: 1 });
+    const scale = Math.min(maxWidth / baseViewport.width, 1.2);
+    const viewport = page.getViewport({ scale });
+
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d", { alpha: false });
+    if (!context) {
+      throw new Error("브라우저에서 PDF 미리보기를 사용할 수 없습니다.");
+    }
+
+    canvas.width = Math.max(1, Math.floor(viewport.width));
+    canvas.height = Math.max(1, Math.floor(viewport.height));
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+
+    await page.render({
+      canvas,
+      canvasContext: context,
+      viewport
+    }).promise;
+
+    const thumbUrl = canvas.toDataURL("image/jpeg", 0.72);
+    pages.push({
+      id: makeId(),
+      pageIndex: pageNumber - 1,
+      label: pageNumber,
+      thumbUrl
+    });
+    page.cleanup();
+  }
+
+  source.destroy();
+  return pages;
+}
+
+/** Rebuild a PDF using zero-based page indices in the given order. */
+export async function reorderPdf(file: File, pageOrder: number[]) {
+  if (pageOrder.length === 0) {
+    throw new Error("내보낼 페이지가 없습니다.");
+  }
+
+  const source = await PDFDocument.load(await file.arrayBuffer());
+  const pageCount = source.getPageCount();
+
+  for (const index of pageOrder) {
+    if (!Number.isInteger(index) || index < 0 || index >= pageCount) {
+      throw new Error("페이지 순서가 올바르지 않습니다.");
+    }
+  }
+
+  const output = await PDFDocument.create();
+  const copied = await output.copyPages(source, pageOrder);
+  copied.forEach((page) => output.addPage(page));
+
+  return {
+    bytes: await output.save(),
+    pageCount,
+    outputCount: pageOrder.length
+  };
+}

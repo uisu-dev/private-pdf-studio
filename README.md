@@ -1,11 +1,11 @@
 # Private PDF Studio
 
-이미지를 PDF로 만들고 PDF를 나누거나 병합하는 GitHub Pages 배포용 Next.js 앱입니다.
+이미지를 PDF로 만들고 PDF를 나누거나 병합·압축하거나, 한 PDF 안에서 페이지 순서를 바꾸는 GitHub Pages 배포용 Next.js 앱입니다.
 
 ## 개인정보 설계
 
 - 선택한 이미지/PDF 파일은 브라우저 메모리에서만 처리됩니다.
-- PDF 변환, 분할, 병합은 `pdf-lib`를 사용해 클라이언트에서 실행됩니다.
+- PDF 변환, 분할, 병합, 압축, 페이지 재배열은 `pdf-lib` / `pdfjs-dist`를 사용해 클라이언트에서 실행됩니다.
 - 파일 바이트를 API Route, Server Action, Storage, GitHub 서버로 보내지 않습니다.
 - GitHub Pages는 HTML/CSS/JS 정적 파일만 호스팅합니다.
 
@@ -38,4 +38,6 @@ https://uisu-dev.github.io/private-pdf-studio/
 - 이미지 여러 장을 A4 PDF로 변환
 - PDF에서 `1-3, 5, 8` 같은 페이지 범위만 추출
 - 여러 PDF를 순서 조정 후 병합
+- PDF 파일 크기 줄이기
+- 한 PDF 안에서 페이지 순서 바꾸기(미리보기·드래그) 후 다시 다운로드
 - 결과 PDF를 로컬로 다운로드

@@ -11,7 +11,9 @@ import {
   FileImage,
   FileLock2,
   FileText,
+  ListOrdered,
   Lock,
+  RotateCcw,
   Scissors,
   ShieldCheck,
   Trash2,
@@ -22,16 +24,19 @@ import {
   downloadBytes,
   formatBytes,
   imagesToPdf,
+  loadPdfPagePreviews,
   makeId,
   mergePdfs,
+  reorderPdf,
   splitPdf,
   type CompressionLevel,
   type ImageFit,
   type PageOrientation,
+  type PdfPagePreview,
   type ToolFile
 } from "@/lib/pdf-tools";
 
-type Tab = "image" | "split" | "merge" | "compress";
+type Tab = "image" | "split" | "merge" | "compress" | "reorder";
 type Result = {
   filename: string;
   bytes: Uint8Array;
@@ -42,7 +47,8 @@ const tabs: Array<{ id: Tab; label: string; icon: React.ReactNode }> = [
   { id: "image", label: "이미지 PDF", icon: <FileImage size={21} /> },
   { id: "split", label: "PDF 나누기", icon: <Scissors size={21} /> },
   { id: "merge", label: "PDF 병합", icon: <Combine size={21} /> },
-  { id: "compress", label: "PDF 줄이기", icon: <FileArchive size={21} /> }
+  { id: "compress", label: "PDF 줄이기", icon: <FileArchive size={21} /> },
+  { id: "reorder", label: "페이지 순서", icon: <ListOrdered size={21} /> }
 ];
 
 function acceptFor(tab: Tab) {
@@ -53,21 +59,21 @@ function defaultOutputName(source: string, suffix: string) {
   return `${source.replace(/\.[^/.]+$/, "")}-${suffix}.pdf`;
 }
 
-function moveByDirection(files: ToolFile[], id: string, direction: -1 | 1) {
-  const index = files.findIndex((item) => item.id === id);
+function moveByDirection<T extends { id: string }>(items: T[], id: string, direction: -1 | 1) {
+  const index = items.findIndex((item) => item.id === id);
   const target = index + direction;
-  if (index < 0 || target < 0 || target >= files.length) return files;
-  const next = [...files];
+  if (index < 0 || target < 0 || target >= items.length) return items;
+  const next = [...items];
   [next[index], next[target]] = [next[target], next[index]];
   return next;
 }
 
-function moveBefore(files: ToolFile[], fromId: string, toId: string) {
-  const fromIndex = files.findIndex((item) => item.id === fromId);
-  const toIndex = files.findIndex((item) => item.id === toId);
-  if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) return files;
+function moveBefore<T extends { id: string }>(items: T[], fromId: string, toId: string) {
+  const fromIndex = items.findIndex((item) => item.id === fromId);
+  const toIndex = items.findIndex((item) => item.id === toId);
+  if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) return items;
 
-  const next = [...files];
+  const next = [...items];
   const [moved] = next.splice(fromIndex, 1);
   next.splice(toIndex, 0, moved);
   return next;
@@ -90,7 +96,9 @@ function Dropzone({
       ? "여러 PDF를 원하는 순서로 병합합니다."
       : tab === "compress"
         ? "PDF를 다시 렌더링해 파일 크기를 줄입니다."
-        : "한 개의 PDF에서 필요한 페이지만 추출합니다.";
+        : tab === "reorder"
+          ? "한 개의 PDF를 올려 페이지 순서를 바꾼 뒤 다시 저장합니다."
+          : "한 개의 PDF에서 필요한 페이지만 추출합니다.";
 
   return (
     <label
@@ -225,12 +233,104 @@ function FileList({
   );
 }
 
+function PageOrderList({
+  pages,
+  onMove,
+  onReorder,
+  onRemove
+}: {
+  pages: PdfPagePreview[];
+  onMove: (id: string, direction: -1 | 1) => void;
+  onReorder: (fromId: string, toId: string) => void;
+  onRemove: (id: string) => void;
+}) {
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
+
+  if (pages.length === 0) {
+    return <p className="empty-state">PDF를 올리면 페이지 미리보기가 여기에 나타납니다.</p>;
+  }
+
+  return (
+    <>
+      <p className="order-hint">페이지를 드래그하거나 화살표로 순서를 바꾼 뒤 PDF를 다시 저장하세요. 필요 없는 페이지는 삭제할 수 있습니다.</p>
+      <div className="page-grid">
+        {pages.map((page, index) => (
+          <div
+            className={`page-card ${draggedId === page.id ? "dragging" : ""} ${dragOverId === page.id ? "drag-over" : ""}`}
+            key={page.id}
+            draggable
+            onDragStart={(event) => {
+              setDraggedId(page.id);
+              event.dataTransfer.effectAllowed = "move";
+              event.dataTransfer.setData("text/plain", page.id);
+            }}
+            onDragOver={(event) => {
+              event.preventDefault();
+              event.dataTransfer.dropEffect = "move";
+              setDragOverId(page.id);
+            }}
+            onDragLeave={() => {
+              if (dragOverId === page.id) setDragOverId(null);
+            }}
+            onDrop={(event) => {
+              event.preventDefault();
+              const fromId = event.dataTransfer.getData("text/plain") || draggedId;
+              setDraggedId(null);
+              setDragOverId(null);
+              if (fromId && fromId !== page.id) onReorder(fromId, page.id);
+            }}
+            onDragEnd={() => {
+              setDraggedId(null);
+              setDragOverId(null);
+            }}
+          >
+            <div className="page-card-top">
+              <span className="file-order" aria-label={`새 순서 ${index + 1}번째`}>
+                {index + 1}
+              </span>
+              <span className="page-origin">원본 {page.label}쪽</span>
+            </div>
+            <img className="page-thumb" src={page.thumbUrl} alt={`${page.label}쪽 미리보기`} draggable={false} />
+            <div className="row-actions page-card-actions">
+              <button
+                className="icon-button"
+                type="button"
+                title="앞으로"
+                disabled={index === 0}
+                onClick={() => onMove(page.id, -1)}
+              >
+                <ArrowUp size={18} />
+              </button>
+              <button
+                className="icon-button"
+                type="button"
+                title="뒤로"
+                disabled={index === pages.length - 1}
+                onClick={() => onMove(page.id, 1)}
+              >
+                <ArrowDown size={18} />
+              </button>
+              <button className="icon-button" type="button" title="이 페이지 제외" onClick={() => onRemove(page.id)}>
+                <Trash2 size={18} />
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
+
 export default function Home() {
   const [tab, setTab] = useState<Tab>("image");
   const [imageFiles, setImageFiles] = useState<ToolFile[]>([]);
   const [splitFiles, setSplitFiles] = useState<ToolFile[]>([]);
   const [mergeFiles, setMergeFiles] = useState<ToolFile[]>([]);
   const [compressFiles, setCompressFiles] = useState<ToolFile[]>([]);
+  const [reorderFiles, setReorderFiles] = useState<ToolFile[]>([]);
+  const [reorderPages, setReorderPages] = useState<PdfPagePreview[]>([]);
+  const [reorderOriginal, setReorderOriginal] = useState<PdfPagePreview[]>([]);
   const [fit, setFit] = useState<ImageFit>("contain");
   const [orientation, setOrientation] = useState<PageOrientation>("portrait");
   const [compressionLevel, setCompressionLevel] = useState<CompressionLevel>("balanced");
@@ -258,8 +358,27 @@ export default function Home() {
     if (tab === "image") return imageFiles;
     if (tab === "split") return splitFiles;
     if (tab === "merge") return mergeFiles;
+    if (tab === "reorder") return reorderFiles;
     return compressFiles;
-  }, [compressFiles, imageFiles, mergeFiles, splitFiles, tab]);
+  }, [compressFiles, imageFiles, mergeFiles, reorderFiles, splitFiles, tab]);
+
+  async function loadReorderPages(file: File) {
+    setBusy(true);
+    setMessage(null);
+    setResult(null);
+    try {
+      const pages = await loadPdfPagePreviews(file);
+      setReorderPages(pages);
+      setReorderOriginal(pages);
+      setMessage(`${pages.length}쪽을 불러왔습니다. 순서를 바꾼 뒤 PDF를 만드세요.`);
+    } catch (error) {
+      setReorderPages([]);
+      setReorderOriginal([]);
+      setMessage(error instanceof Error ? error.message : "페이지 미리보기를 만들지 못했습니다.");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   function addFiles(files: File[]) {
     setResult(null);
@@ -282,6 +401,12 @@ export default function Home() {
       setSplitFiles(next.slice(0, 1));
     } else if (tab === "compress") {
       setCompressFiles(next.slice(0, 1));
+    } else if (tab === "reorder") {
+      const chosen = next.slice(0, 1);
+      setReorderFiles(chosen);
+      setReorderPages([]);
+      setReorderOriginal([]);
+      if (chosen[0]) void loadReorderPages(chosen[0].file);
     } else {
       setMergeFiles((current) => [...current, ...next]);
     }
@@ -293,6 +418,11 @@ export default function Home() {
     if (tab === "split") setSplitFiles((current) => current.filter((item) => item.id !== id));
     if (tab === "merge") setMergeFiles((current) => current.filter((item) => item.id !== id));
     if (tab === "compress") setCompressFiles((current) => current.filter((item) => item.id !== id));
+    if (tab === "reorder") {
+      setReorderFiles((current) => current.filter((item) => item.id !== id));
+      setReorderPages([]);
+      setReorderOriginal([]);
+    }
   }
 
   function moveMergeFile(id: string, direction: -1 | 1) {
@@ -357,6 +487,20 @@ export default function Home() {
           detail: `${formatBytes(before)} → ${formatBytes(after)}${saved > 0 ? `, ${saved}% 감소` : ""}`
         });
       }
+
+      if (tab === "reorder") {
+        if (!reorderFiles[0]) throw new Error("순서를 바꿀 PDF를 먼저 추가해주세요.");
+        if (reorderPages.length === 0) throw new Error("내보낼 페이지가 없습니다.");
+        const { bytes, pageCount, outputCount } = await reorderPdf(
+          reorderFiles[0].file,
+          reorderPages.map((page) => page.pageIndex)
+        );
+        setResult({
+          filename: defaultOutputName(reorderFiles[0].file.name, "reordered"),
+          bytes,
+          detail: `${pageCount}쪽 중 ${outputCount}쪽을 새 순서로 저장`
+        });
+      }
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "처리 중 문제가 발생했습니다.");
     } finally {
@@ -364,7 +508,9 @@ export default function Home() {
     }
   }
 
-  const canRun = activeFiles.length > 0 && !busy;
+  const canRun = tab === "reorder"
+    ? reorderFiles.length > 0 && reorderPages.length > 0 && !busy
+    : activeFiles.length > 0 && !busy;
 
   return (
     <main className="app">
@@ -392,8 +538,8 @@ export default function Home() {
             <div className="eyebrow">No server upload</div>
             <h1>Private PDF</h1>
             <p>
-              이미지 변환, PDF 나누기와 병합을 브라우저에서 바로 처리합니다. 선택한 파일은
-              GitHub 서버로 전송하지 않습니다.
+              이미지 변환, PDF 나누기·병합·줄이기, 페이지 순서 바꾸기를 브라우저에서 바로 처리합니다.
+              선택한 파일은 GitHub 서버로 전송하지 않습니다.
             </p>
             <div className="privacy-strip">
               <span className="privacy-item">
@@ -448,7 +594,9 @@ export default function Home() {
                     ? "페이지 번호를 입력하면 해당 페이지만 새 PDF로 저장합니다."
                     : tab === "merge"
                       ? "PDF를 목록 순서대로 한 파일로 합칩니다."
-                      : "이미지 중심 PDF를 다시 렌더링해 파일 크기를 줄입니다."}
+                      : tab === "reorder"
+                        ? "한 PDF 안에서 페이지를 앞뒤로 옮긴 뒤 다시 다운로드합니다."
+                        : "이미지 중심 PDF를 다시 렌더링해 파일 크기를 줄입니다."}
               </p>
             </div>
             <button className="button secondary" type="button" onClick={() => window.location.reload()}>
@@ -510,9 +658,30 @@ export default function Home() {
                 </div>
               ) : null}
 
+              {tab === "reorder" ? (
+                <button
+                  className="button secondary"
+                  type="button"
+                  disabled={reorderOriginal.length === 0 || busy}
+                  onClick={() => {
+                    setReorderPages(reorderOriginal);
+                    setResult(null);
+                    setMessage("원래 페이지 순서로 되돌렸습니다.");
+                  }}
+                >
+                  <RotateCcw size={17} /> 원래 순서
+                </button>
+              ) : null}
+
               <button className="button" type="button" disabled={!canRun} onClick={runTool}>
                 <Download size={17} />
-                {busy ? "처리 중" : tab === "image" ? "하나의 PDF 만들기" : "PDF 만들기"}
+                {busy
+                  ? "처리 중"
+                  : tab === "image"
+                    ? "하나의 PDF 만들기"
+                    : tab === "reorder"
+                      ? "순서 적용해 저장"
+                      : "PDF 만들기"}
               </button>
             </div>
 
@@ -530,13 +699,31 @@ export default function Home() {
               </div>
             ) : null}
 
-            <FileList
-              files={activeFiles}
-              reorder={tab === "image" || tab === "merge"}
-              onRemove={removeFile}
-              onMove={tab === "image" ? moveImageFile : moveMergeFile}
-              onReorder={tab === "image" ? reorderImageFile : reorderMergeFile}
-            />
+            {tab === "reorder" ? (
+              <PageOrderList
+                pages={reorderPages}
+                onMove={(id, direction) => {
+                  setResult(null);
+                  setReorderPages((current) => moveByDirection(current, id, direction));
+                }}
+                onReorder={(fromId, toId) => {
+                  setResult(null);
+                  setReorderPages((current) => moveBefore(current, fromId, toId));
+                }}
+                onRemove={(id) => {
+                  setResult(null);
+                  setReorderPages((current) => current.filter((page) => page.id !== id));
+                }}
+              />
+            ) : (
+              <FileList
+                files={activeFiles}
+                reorder={tab === "image" || tab === "merge"}
+                onRemove={removeFile}
+                onMove={tab === "image" ? moveImageFile : moveMergeFile}
+                onReorder={tab === "image" ? reorderImageFile : reorderMergeFile}
+              />
+            )}
 
             {result ? (
               <>
