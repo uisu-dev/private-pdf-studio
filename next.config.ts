@@ -11,7 +11,14 @@ const nextConfig: NextConfig = {
     unoptimized: true
   },
   basePath: isGitHubPages ? `/${repositoryName}` : undefined,
-  assetPrefix: isGitHubPages ? `/${repositoryName}/` : undefined
+  assetPrefix: isGitHubPages ? `/${repositoryName}/` : undefined,
+  webpack: (config) => {
+    config.module.rules.push({
+      test: /\.woff2$/i,
+      type: "asset/resource"
+    });
+    return config;
+  }
 };
 
 export default nextConfig;
