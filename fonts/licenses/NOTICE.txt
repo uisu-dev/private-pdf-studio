@@ -1,0 +1,18 @@
+These fonts are distributed with Private PDF Studio under the SIL Open Font License 1.1.
+The full license text for each family is in this directory. The files were subset to Latin,
+punctuation, and Hangul so the static site stays small.
+
+Nanum Pen Script, Nanum Brush Script, and Nanum Myeongjo are derivatives.
+Their Reserved Font Names are not used as the fonts' primary names; the name tables
+inside those files use the PPS prefix. UI copy still credits the original families.
+
+Original authors and copyrights are in the accompanying OFL files:
+- Nanum Pen Script, Nanum Brush Script, Nanum Myeongjo — NHN Corporation
+- Gaegu — The Gaegu Project Authors
+- Hi Melody, East Sea Dokdo, Gamja Flower — YoonDesign Inc.
+- Yeon Sung — The BM YEONSUNG Project Authors
+- Single Day — DXKorea Inc.
+- Song Myung — The SongMyung Project Authors
+- Gowun Batang — The Gowun Batang Project Authors
+- Do Hyeon — The Do Hyeon Project Authors
+- Black Han Sans — The Black Han Sans Project Authors

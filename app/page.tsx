@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import {
   ArrowDown,
   ArrowUp,
@@ -16,6 +17,7 @@ import {
   RotateCcw,
   Scissors,
   ShieldCheck,
+  Stamp,
   Trash2,
   Upload
 } from "lucide-react";
@@ -36,7 +38,19 @@ import {
   type ToolFile
 } from "@/lib/pdf-tools";
 
-type Tab = "image" | "split" | "merge" | "compress" | "reorder";
+const SignatureTool = dynamic(() => import("./signature-tool"), {
+  ssr: false,
+  loading: () => (
+    <div className="panel-body">
+      <div className="progress" aria-label="도구 불러오는 중">
+        <div />
+      </div>
+    </div>
+  )
+});
+
+type Tab = "image" | "split" | "merge" | "compress" | "reorder" | "sign";
+type FileTab = Exclude<Tab, "sign">;
 type Result = {
   filename: string;
   bytes: Uint8Array;
@@ -48,10 +62,11 @@ const tabs: Array<{ id: Tab; label: string; icon: React.ReactNode }> = [
   { id: "split", label: "PDF 나누기", icon: <Scissors size={21} /> },
   { id: "merge", label: "PDF 병합", icon: <Combine size={21} /> },
   { id: "compress", label: "PDF 줄이기", icon: <FileArchive size={21} /> },
-  { id: "reorder", label: "페이지 순서", icon: <ListOrdered size={21} /> }
+  { id: "reorder", label: "페이지 순서", icon: <ListOrdered size={21} /> },
+  { id: "sign", label: "서명·도장", icon: <Stamp size={21} /> }
 ];
 
-function acceptFor(tab: Tab) {
+function acceptFor(tab: FileTab) {
   return tab === "image" ? "image/*" : "application/pdf,.pdf";
 }
 
@@ -84,7 +99,7 @@ function Dropzone({
   multiple,
   onFiles
 }: {
-  tab: Tab;
+  tab: FileTab;
   multiple: boolean;
   onFiles: (files: File[]) => void;
 }) {
@@ -339,6 +354,7 @@ export default function Home() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [signMounted, setSignMounted] = useState(false);
 
   useEffect(() => {
     if (!result) {
@@ -381,6 +397,7 @@ export default function Home() {
   }
 
   function addFiles(files: File[]) {
+    if (tab === "sign") return;
     setResult(null);
     setMessage(null);
 
@@ -538,7 +555,7 @@ export default function Home() {
             <div className="eyebrow">No server upload</div>
             <h1>Private PDF</h1>
             <p>
-              이미지 변환, PDF 나누기·병합·줄이기, 페이지 순서 바꾸기를 브라우저에서 바로 처리합니다.
+              이미지 변환, PDF 나누기·병합·줄이기, 페이지 순서 바꾸기, 서명·도장을 브라우저에서 바로 처리합니다.
               선택한 파일은 GitHub 서버로 전송하지 않습니다.
             </p>
             <div className="privacy-strip">
@@ -573,6 +590,7 @@ export default function Home() {
               type="button"
               onClick={() => {
                 setTab(item.id);
+                if (item.id === "sign") setSignMounted(true);
                 setResult(null);
                 setMessage(null);
               }}
@@ -596,7 +614,9 @@ export default function Home() {
                       ? "PDF를 목록 순서대로 한 파일로 합칩니다."
                       : tab === "reorder"
                         ? "한 PDF 안에서 페이지를 앞뒤로 옮긴 뒤 다시 다운로드합니다."
-                        : "이미지 중심 PDF를 다시 렌더링해 파일 크기를 줄입니다."}
+                        : tab === "sign"
+                          ? "이름 서명이나 도장을 만들어 페이지 위에 올리고 PDF로 저장합니다."
+                          : "이미지 중심 PDF를 다시 렌더링해 파일 크기를 줄입니다."}
               </p>
             </div>
             <button className="button secondary" type="button" onClick={() => window.location.reload()}>
@@ -604,6 +624,13 @@ export default function Home() {
             </button>
           </div>
 
+          {signMounted ? (
+            <div hidden={tab !== "sign"}>
+              <SignatureTool />
+            </div>
+          ) : null}
+
+          {tab !== "sign" ? (
           <div className="panel-body">
             <Dropzone tab={tab} multiple={tab === "image" || tab === "merge"} onFiles={addFiles} />
 
@@ -751,6 +778,7 @@ export default function Home() {
               </>
             ) : null}
           </div>
+          ) : null}
         </section>
       </section>
     </main>

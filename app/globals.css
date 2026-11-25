@@ -709,3 +709,352 @@ h1 {
 .page-card-actions {
   justify-content: flex-end;
 }
+
+.sign-tool {
+  display: grid;
+  gap: 0;
+}
+
+.segmented {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 8px;
+  background: var(--panel-soft);
+}
+
+.segmented button {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 14px;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.segmented button.active {
+  background: #fff;
+  color: var(--accent-dark);
+  box-shadow: 0 1px 3px rgba(25, 31, 40, 0.08);
+}
+
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.chip {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: var(--panel-soft);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.chip.active {
+  background: #e8f1fe;
+  color: var(--accent-dark);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.chip-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px rgba(25, 31, 40, 0.16);
+}
+
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  font-weight: 650;
+}
+
+.check-row input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+}
+
+.field-hint,
+.font-credit {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.55;
+}
+
+.font-credit {
+  margin-top: 14px;
+}
+
+.font-preload {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.variant-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.variant-card {
+  display: grid;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+  color: var(--ink);
+}
+
+.variant-card.selected {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.variant-preview {
+  height: 104px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.variant-preview img {
+  max-width: 100%;
+  max-height: 96px;
+}
+
+.variant-card > span:last-child {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 650;
+}
+
+.checker {
+  background-color: #f8fafc;
+  background-image:
+    linear-gradient(45deg, #e5e8eb 25%, transparent 25%),
+    linear-gradient(-45deg, #e5e8eb 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #e5e8eb 75%),
+    linear-gradient(-45deg, transparent 75%, #e5e8eb 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+}
+
+.draw-block {
+  margin-top: 14px;
+}
+
+.draw-frame {
+  margin-top: 10px;
+  border: 1px dashed #b0b8c1;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.draw-pad {
+  display: block;
+  width: 100%;
+  height: 220px;
+  touch-action: none;
+  cursor: crosshair;
+  background: transparent;
+}
+
+.sign-stage-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: baseline;
+  margin-top: 22px;
+}
+
+.sign-stage-head span {
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.sign-thumbs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  margin-top: 12px;
+  padding-bottom: 4px;
+}
+
+.sign-thumb {
+  flex: 0 0 auto;
+  width: 76px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.sign-thumb.active {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.sign-thumb img {
+  width: 100%;
+  height: 84px;
+  object-fit: contain;
+  background: var(--panel-soft);
+  border-radius: 4px;
+}
+
+.sign-thumb span {
+  display: block;
+  margin-top: 4px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.sign-stage {
+  position: relative;
+  width: min(100%, 820px);
+  margin: 14px auto 0;
+  background: #fff;
+  box-shadow: 0 10px 30px rgba(25, 31, 40, 0.08);
+  line-height: 0;
+  touch-action: manipulation;
+  outline: none;
+}
+
+.sign-stage:focus-visible {
+  box-shadow: 0 0 0 3px rgba(49, 130, 246, 0.35);
+}
+
+.sign-page-image {
+  width: 100%;
+  height: auto;
+  display: block;
+  user-select: none;
+}
+
+.sign-mark {
+  position: absolute;
+  z-index: 1;
+  touch-action: none;
+  cursor: move;
+}
+
+.sign-mark.selected {
+  z-index: 2;
+  outline: 1.5px dashed var(--accent);
+  outline-offset: 3px;
+}
+
+.sign-mark img {
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  user-select: none;
+}
+
+.sign-handle,
+.sign-rotate,
+.sign-delete {
+  position: absolute;
+  padding: 0;
+  border-radius: 999px;
+  background: #fff;
+  border: 2px solid var(--accent);
+  touch-action: none;
+  cursor: pointer;
+}
+
+.sign-handle {
+  width: 16px;
+  height: 16px;
+}
+
+.sign-handle::after,
+.sign-rotate::after {
+  content: "";
+  position: absolute;
+  inset: -12px;
+}
+
+.sign-handle.nw { left: -8px; top: -8px; }
+.sign-handle.ne { right: -8px; top: -8px; }
+.sign-handle.sw { left: -8px; bottom: -8px; }
+.sign-handle.se { right: -8px; bottom: -8px; }
+
+.sign-rotate {
+  left: 50%;
+  top: -30px;
+  width: 16px;
+  height: 16px;
+  transform: translateX(-50%);
+}
+
+.sign-rotate-stem {
+  position: absolute;
+  left: 50%;
+  top: -16px;
+  width: 1.5px;
+  height: 16px;
+  background: var(--accent);
+  transform: translateX(-50%);
+}
+
+.sign-delete {
+  top: -38px;
+  right: -10px;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  color: var(--danger);
+  border-color: var(--line);
+  box-shadow: 0 4px 12px rgba(25, 31, 40, 0.12);
+}
+
+.field input[type="range"] {
+  height: 32px;
+  padding: 0;
+  accent-color: var(--accent);
+}
+
+@media (max-width: 580px) {
+  .variant-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .sign-stage-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .chip,
+  .segmented button {
+    min-height: 40px;
+  }
+}
