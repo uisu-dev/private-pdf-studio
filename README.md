@@ -40,4 +40,7 @@ https://uisu-dev.github.io/private-pdf-studio/
 - 여러 PDF를 순서 조정 후 병합
 - PDF 파일 크기 줄이기
 - 한 PDF 안에서 페이지 순서 바꾸기(미리보기·드래그) 후 다시 다운로드
+- 한글 손글씨 서명과 도장을 만들어 페이지에 올린 뒤 `<원본>_서명.pdf`로 저장
 - 결과 PDF를 로컬로 다운로드
+
+서명·도장 글꼴은 `fonts/`에 포함한 SIL Open Font License 한글 서브셋입니다. 라이선스 원문은 `fonts/licenses/`에 있습니다.
